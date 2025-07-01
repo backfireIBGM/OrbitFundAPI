@@ -1,21 +1,25 @@
-using Microsoft.Azure.Functions.Worker;
+// Program.cs
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.ManagedIdentity;
+using Microsoft.Extensions.Logging; // ADD THIS
 
-var host = new HostBuilder()
-    .ConfigureFunctionsWorkerDefaults() // Correct method for Functions Worker setup
-    .ConfigureServices((context, services) =>
+var host = Host.CreateDefaultBuilder()
+    .ConfigureFunctionsWebApplication()
+    .ConfigureServices(services =>
     {
-        // Retrieve connection string with null check
-        string connectionString = Environment.GetEnvironmentVariable("SqlConnectionString")
-            ?? throw new InvalidOperationException("SqlConnectionString environment variable not set.");
+        // Use a transient logger builder just for a very early check if Program.cs is running
+        // This is a hacky way to log if regular DI isn't working yet for the full ILogger<T>
+        var serviceProvider = services.BuildServiceProvider();
+        var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+        var programLogger = loggerFactory?.CreateLogger("ProgramStartup");
+        programLogger?.LogInformation("Program.cs: Starting host configuration."); // <-- ADD THIS
 
-        // Configure DbContext with Azure SQL
+        services.AddLogging(); // Make sure this is present for Function class
+        
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(Environment.GetEnvironmentVariable("SqlConnectionString")));
     })
     .Build();
 
-await host.RunAsync();
+host.Run();
