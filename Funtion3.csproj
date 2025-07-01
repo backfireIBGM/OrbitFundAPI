@@ -1,29 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework> <!-- THIS IS NOW CORRECT -->
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>AZFW0014</NoWarn>
+    <!-- <NoWarn>AZFW0014</NoWarn> can likely be removed once stable -->
   </PropertyGroup>
-  
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.0.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.2.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.0.1" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
+    <!-- **CHANGE THESE PACKAGE VERSIONS TO STABLE .NET 8 COMPATIBLE VERSIONS** -->
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.6" /> <!-- Changed from 9.0.6 to 8.0.6 -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" /> <!-- Latest stable for .NET 8 -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.2" /> <!-- Latest stable for .NET 8 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6"> <!-- Changed from 9.0.6 to 8.0.6 -->
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.6" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.6" />
-    <PackageReference Include="Microsoft.Net.Http.Headers" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.6" /> <!-- Changed from 9.0.6 to 8.0.6 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.6" /> <!-- Changed from 9.0.6 to 8.0.6 -->
+    <PackageReference Include="Microsoft.Net.Http.Headers" Version="8.0.6" /> <!-- Changed from 9.0.6 to 8.0.6 -->
+    <!-- Make sure Microsoft.Data.SqlClient (if explicitly added) is also a stable .NET 8 compatible version, e.g., 5.2.0 -->
   </ItemGroup>
-  
+
   <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -33,7 +35,7 @@
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
-  
+
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
