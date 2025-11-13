@@ -14,7 +14,7 @@ export default (db, jwtConfig, logger) => {
                 return res.json([]); // No missions, send empty array
             }
 
-            // Extract all mission IDs to fetch associated URLs efficiently
+            // Extract all mission IDs to fetch associated data efficiently
             const missionIds = missions.map(mission => mission.Id);
             const missionIdsPlaceholder = missionIds.map(() => '?').join(','); // e.g., ?,?,?
 
@@ -36,12 +36,18 @@ export default (db, jwtConfig, logger) => {
                 missionIds
             );
 
-            // 5. Process the data: Attach URLs to their respective missions
-            const missionsWithUrls = missions.map(mission => {
-                // Initialize URL arrays
+            const [milestones] = await db.execute(
+                `SELECT submission_id, milestone_name, target_amount FROM FormSubmissionMilestones WHERE submission_id IN (${missionIdsPlaceholder}) ORDER BY target_amount ASC`,
+                missionIds
+            );
+
+            // 5. Process the data: Attach all associated data to their respective missions
+            const missionsWithAllData = missions.map(mission => {
+                // Initialize arrays for associated data
                 mission.images = [];
                 mission.videos = [];
                 mission.documents = [];
+                mission.milestones = []; // Already correctly initialized
 
                 // Attach images
                 images.forEach(img => {
@@ -64,14 +70,25 @@ export default (db, jwtConfig, logger) => {
                     }
                 });
 
+                // Attach milestones
+                milestones.forEach(mstone => {
+                    if (mstone.submission_id === mission.Id) {
+                        // Push the entire milestone object, not just a property
+                        mission.milestones.push({
+                            milestone_name: mstone.milestone_name,
+                            target_amount: mstone.target_amount
+                        });
+                    }
+                });
+
                 return mission;
             });
 
-            logger.info(`User ${req.user.username} (ID: ${req.user.id}) retrieved ${missionsWithUrls.length} approved missions with associated URLs.`);
-            res.json(missionsWithUrls); // Send the combined JSON response
+            logger.info(`User ${req.user.username} (ID: ${req.user.id}) retrieved ${missionsWithAllData.length} approved missions with associated data.`);
+            res.json(missionsWithAllData); // Send the combined JSON response
 
         } catch (error) {
-            logger.error(`MySQL Error fetching approved missions with URLs for user ${req.user.username} (ID: ${req.user.id}):`, error);
+            logger.error(`MySQL Error fetching approved missions with all associated data for user ${req.user.username} (ID: ${req.user.id}):`, error);
             res.status(500).json({ message: `Database error: ${error.message}` });
         }
     });
