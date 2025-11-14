@@ -3,17 +3,15 @@ import express from 'express';
 import mysql from 'mysql2/promise';
 import winston from 'winston';
 import cors from 'cors';
-import jwt from 'jsonwebtoken'; // Needed for shared authenticateToken
+import jwt from 'jsonwebtoken';
 
 
-// Import your user routes and submission routes
 import createUsersRouter from './routes/users.js';
 import createSubmissionsRouter from './routes/submissions.js';
-// Corrected import path
 import createMissionsRouter from './routes/publicMissions.js';
-// NEW: Import the approval routes and auth middleware factory
+import createApprovedMissionByIdRouter from './routes/singleMission.js'; // Good variable name for the import
 import createApprovalRouter from './routes/approval.js';
-import createAuthMiddleware from './middleware/auth.js'; // This is a factory
+import createAuthMiddleware from './middleware/auth.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -40,7 +38,6 @@ const logger = winston.createLogger({
 
 let db;
 try {
-  // Use 'await' outside of an async function because server.js itself is an ES Module now
   db = await mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -77,7 +74,6 @@ if (!appConfig.jwt.jwtSecret || !appConfig.jwt.jwtIssuer || !appConfig.jwt.jwtAu
   process.exit(1);
 }
 
-// --- RE-ENABLED CRITICAL B2 CONFIG VALIDATION ---
 if (
   !appConfig.backblazeB2S3.accessKeyId ||
   !appConfig.backblazeB2S3.applicationKey ||
@@ -90,26 +86,23 @@ if (
   );
   process.exit(1);
 }
-// --- END RE-ENABLED ---
 
-// Instantiate shared authentication and authorization middleware
 const { authenticateToken, authorizeAdmin } = createAuthMiddleware(appConfig.jwt, logger);
-
 
 app.use('/api/users', createUsersRouter(db, appConfig.jwt, logger));
 logger.info('Users routes mounted at /api/users.');
 
-// Submission routes (assuming these also require authentication, adjust if not)
-// If submissions only need authentication, you might do:
-// app.use('/api/submission', authenticateToken, createSubmissionsRouter(db, appConfig, logger));
-// If they need admin role too:
 app.use('/api/submission', authenticateToken, createSubmissionsRouter(db, appConfig, logger));
 logger.info('Submission routes mounted at /api/submission.');
 
-app.use('/api/missions', authenticateToken, createMissionsRouter(db, appConfig.jwt, logger));
-logger.info('Missions routes mounted at /api/missions.');
+app.use('/api/missions', createMissionsRouter(db, appConfig.jwt, logger));
+logger.info('Public Missions routes mounted at /api/missions (publicly accessible).');
 
-// NEW: Mount Approval routes with both authentication and admin authorization
+// --- CORRECTED MOUNT POINT AND LOG MESSAGE ---
+app.use('/api/approved-missions', createApprovedMissionByIdRouter(db, appConfig.jwt, logger)); // <--- Consistent mount point
+logger.info('Approved Mission By ID routes mounted at /api/approved-missions (publicly accessible).'); // <--- Consistent log
+// --- END CORRECTED ---
+
 app.use('/api/Approval', authenticateToken, authorizeAdmin, createApprovalRouter(db, appConfig.jwt, logger));
 logger.info('Approval routes mounted at /api/Approval with Admin authorization.');
 
@@ -118,10 +111,8 @@ app.listen(port, () => {
   logger.info(`OrbitFund backend listening at http://localhost:${port}`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM signal received: closing HTTP server');
-  // Since db is a Promise.all() pool, you would call .end() on it.
   if (db && typeof db.end === 'function') {
     db.end().then(() => {
       logger.info('Database pool closed.');

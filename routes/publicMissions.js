@@ -10,7 +10,7 @@ export default (db, jwtConfig, logger) => {
             const [missions] = await db.execute("SELECT * FROM FormSubmissions WHERE Status = 'Approved' ORDER BY id DESC");
 
             if (missions.length === 0) {
-                logger.info(`User ${req.user.username} (ID: ${req.user.id}) retrieved 0 approved missions.`);
+		logger.info(`Retrieved 0 approved missions.`);
                 return res.json([]); // No missions, send empty array
             }
 
@@ -83,12 +83,11 @@ export default (db, jwtConfig, logger) => {
 
                 return mission;
             });
-
-            logger.info(`User ${req.user.username} (ID: ${req.user.id}) retrieved ${missionsWithAllData.length} approved missions with associated data.`);
+	    logger.info(`Retrieved ${missionsWithAllData.length} approved missions with associated data.`);
             res.json(missionsWithAllData); // Send the combined JSON response
 
         } catch (error) {
-            logger.error(`MySQL Error fetching approved missions with all associated data for user ${req.user.username} (ID: ${req.user.id}):`, error);
+	    logger.error(`MySQL Error fetching approved missions with all associated data:`, error);
             res.status(500).json({ message: `Database error: ${error.message}` });
         }
     });
