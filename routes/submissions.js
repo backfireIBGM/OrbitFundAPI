@@ -1,4 +1,3 @@
-// routes/submissions.js (Simplified - remove isB2ConfigValid)
 import express from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -16,7 +15,7 @@ export default (db, config, logger) => {
 
   // --- S3 client is always initialized now, as server.js guarantees config ---
   const s3Client = new S3Client({
-    region: 'us-east-1', // Placeholder, B2 doesn't technically use AWS regions like this
+    region: b2Config.Region,
     endpoint: b2Config.serviceUrl,
     credentials: {
       accessKeyId: b2Config.accessKeyId,
@@ -27,7 +26,6 @@ export default (db, config, logger) => {
   logger.info('S3 Client initialized within SubmissionController.');
 
   const uploadFileToS3 = async (file, folder) => {
-    // No need for s3Client check here, it's guaranteed to be initialized
     if (!file || file.size === 0 || !file.originalname) {
       logger.warn(`Skipping empty or null-named file in folder: ${folder}`);
       return null;
@@ -152,11 +150,6 @@ export default (db, config, logger) => {
         }
         // --- End S3 Uploads ---
 
-
-        const imageUrlsString = savedImageUrls.length > 0 ? savedImageUrls.join(',') : null;
-        const videoUrlsString = savedVideoUrls.length > 0 ? savedVideoUrls.join(',') : null;
-        const docUrlsString = savedDocUrls.length > 0 ? savedDocUrls.join(',') : null;
-
         if (!mysqlConnectionString) {
           logger.error("MySQL Connection string is not set in configuration.");
           return res.status(500).json({ message: 'Server configuration error: Database connection string is missing.' });
@@ -164,13 +157,10 @@ export default (db, config, logger) => {
         logger.info("MySQL Connection string successfully loaded for submission.");
 
         const sqlString = `
-          INSERT INTO FormSubmissions(
-              title, description, goals, type, launchDate, teamInfo, fundingGoal, duration,
-              budgetBreakdown, rewards, image_urls, video_urls, document_urls
-          ) VALUES (
-              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-          )`;
-
+          INSERT INTO FormSubmissions (
+              title, description, goals, type, launchDate, teamInfo, fundingGoal, duration, budgetBreakdown, rewards
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `;
         const [result] = await db.execute(sqlString, [
           title || null,
           description || null,
@@ -182,10 +172,51 @@ export default (db, config, logger) => {
           duration || null,
           budgetBreakdown || null,
           rewards || null,
-          imageUrlsString,
-          videoUrlsString,
-          docUrlsString,
         ]);
+
+        const submissionId = result.insertId;
+
+        // Insert into FormSubmissionImages
+        if (savedImageUrls.length > 0) {
+          const imageInsertSql =
+            'INSERT INTO FormSubmissionImages (submission_id, image_url) VALUES (?, ?)';
+          for (const imageUrl of savedImageUrls) {
+            await db.execute(imageInsertSql, [submissionId, imageUrl]);
+          }
+          logger.info(
+            'Successfully stored %d image URLs for submissionId: %s',
+            savedImageUrls.length,
+            submissionId
+          );
+        }
+
+        // Insert into FormSubmissionVideos
+        if (savedVideoUrls.length > 0) {
+          const videoInsertSql =
+            'INSERT INTO FormSubmissionVideos (submission_id, video_url) VALUES (?, ?)';
+          for (const videoUrl of savedVideoUrls) {
+            await db.execute(videoInsertSql, [submissionId, videoUrl]);
+          }
+          logger.info(
+            'Successfully stored %d video URLs for submissionId: %s',
+            savedVideoUrls.length,
+            submissionId
+          );
+        }
+
+        // Insert into FormSubmissionDocuments
+        if (savedDocUrls.length > 0) {
+          const documentInsertSql =
+            'INSERT INTO FormSubmissionDocuments (submission_id, document_url) VALUES (?, ?)';
+          for (const docUrl of savedDocUrls) {
+            await db.execute(documentInsertSql, [submissionId, docUrl]);
+          }
+          logger.info(
+            'Successfully stored %d document URLs for submissionId: %s',
+            savedDocUrls.length,
+            submissionId
+          );
+        }
 
         logger.info(
           "Successfully stored core mission data for: '%s'. InsertId: %s",
