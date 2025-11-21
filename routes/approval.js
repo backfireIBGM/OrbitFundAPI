@@ -1,9 +1,8 @@
 import express from 'express';
 
-export default (db, jwtConfig, logger) => { // jwtConfig passed but not directly used within this file's logic
+export default (db, jwtConfig, logger) => {
     const router = express.Router();
 
-    // Helper to handle string list splitting (like in C#)
     const splitStringToList = (str) => {
         if (!str) return [];
         return str.split(',').filter(s => s.trim() !== '');
@@ -13,8 +12,8 @@ export default (db, jwtConfig, logger) => { // jwtConfig passed but not directly
     router.get('/pending-ids', async (req, res) => {
         // req.user is available here due to authenticateToken & authorizeAdmin middleware in server.js
         try {
-            const [rows] = await db.execute("SELECT id FROM FormSubmissions WHERE Status = 'Pending' ORDER BY id DESC");
-            const submissionIds = rows.map(row => row.id);
+            const [rows] = await db.execute("SELECT Id FROM FormSubmissions WHERE Status = 'Pending' ORDER BY Id DESC");
+            const submissionIds = rows.map(row => row.Id);
             logger.info(`Admin user ${req.user.username} (ID: ${req.user.id}) retrieved ${submissionIds.length} pending submission IDs.`);
             res.json(submissionIds);
         } catch (error) {
@@ -35,10 +34,25 @@ export default (db, jwtConfig, logger) => { // jwtConfig passed but not directly
         try {
             const sql = `
                 SELECT
-                    id, title, description, goals, type, launchDate, teamInfo, fundingGoal, duration,
-                    budgetBreakdown, rewards, image_urls, video_urls, document_urls, Status, CreatedAt
-                FROM FormSubmissions
-                WHERE id = ?`;
+                    fs.Id, fs.title, fs.description, fs.goals, fs.type, fs.launchDate,
+                    fs.teamInfo, fs.fundingGoal, fs.duration, fs.budgetBreakdown,
+                    fs.rewards, fs.Status, fs.CreatedAt,
+                    GROUP_CONCAT(DISTINCT fsi.image_url ORDER BY fsi.id ASC) AS imageUrls,
+                    GROUP_CONCAT(DISTINCT fsv.video_url ORDER BY fsv.id ASC) AS videoUrls,
+                    GROUP_CONCAT(DISTINCT fsd.document_url ORDER BY fsd.id ASC) AS documentUrls,
+                    GROUP_CONCAT(
+                        DISTINCT CONCAT(fsm.milestone_name, '||', fsm.target_amount)
+                        ORDER BY fsm.id ASC
+                    ) AS milestones
+                FROM FormSubmissions fs
+                LEFT JOIN FormSubmissionImages fsi ON fs.Id = fsi.submission_id
+                LEFT JOIN FormSubmissionVideos fsv ON fs.Id = fsv.submission_id
+                LEFT JOIN FormSubmissionDocuments fsd ON fs.Id = fsd.submission_id
+                LEFT JOIN FormSubmissionMilestones fsm ON fs.Id = fsm.submission_id
+                WHERE fs.Id = ?
+                GROUP BY fs.Id, fs.title, fs.description, fs.goals, fs.type, fs.launchDate,
+                         fs.teamInfo, fs.fundingGoal, fs.duration, fs.budgetBreakdown,
+                         fs.rewards, fs.Status, fs.CreatedAt`;
 
             const [rows] = await db.execute(sql, [id]);
 
@@ -49,7 +63,7 @@ export default (db, jwtConfig, logger) => { // jwtConfig passed but not directly
 
             const row = rows[0];
             const submission = {
-                id: row.id,
+                id: row.Id,
                 title: row.title,
                 description: row.description,
                 goals: row.goals,
@@ -60,9 +74,10 @@ export default (db, jwtConfig, logger) => { // jwtConfig passed but not directly
                 duration: row.duration,
                 budgetBreakdown: row.budgetBreakdown,
                 rewards: row.rewards,
-                imageUrls: splitStringToList(row.image_urls),
-                videoUrls: splitStringToList(row.video_urls),
-                documentUrls: splitStringToList(row.document_urls),
+                imageUrls: splitStringToList(row.imageUrls),
+                videoUrls: splitStringToList(row.videoUrls),
+                documentUrls: splitStringToList(row.documentUrls),
+                milestones: splitStringToList(row.milestones), // New: split the concatenated milestones
                 status: row.Status,
                 createdAt: row.CreatedAt
             };
@@ -88,7 +103,7 @@ export default (db, jwtConfig, logger) => { // jwtConfig passed but not directly
             const sql = `
                 UPDATE FormSubmissions
                 SET Status = ?, AdminNotes = ?, LastUpdated = NOW()
-                WHERE id = ? AND Status = 'Pending'`;
+                WHERE Id = ? AND Status = 'Pending'`;
 
             const [result] = await db.execute(sql, [newStatus, adminNotes || null, id]);
 
