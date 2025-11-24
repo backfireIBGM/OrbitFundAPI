@@ -1,3 +1,4 @@
+// C:/WebDev/OrbitFundAPI/routes/submissions.js
 import express from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -7,6 +8,7 @@ import path from 'path';
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+// THIS IS THE CRUCIAL PART: The 'export default' keyword
 export default (db, config, logger) => {
   const router = express.Router();
 
@@ -31,7 +33,9 @@ export default (db, config, logger) => {
       return null;
     }
 
-    const fileNameInBucket = `${folder}/${uuidv4()}${path.extname(file.originalname)}`;
+    const fileNameInBucket = `${folder}/${uuidv4()}${path.extname(
+      file.originalname
+    )}`;
 
     try {
       const command = new PutObjectCommand({
@@ -45,7 +49,9 @@ export default (db, config, logger) => {
       await s3Client.send(command);
 
       const fileUrl = `${b2Config.publicFileUrlPrefix}/${b2Config.bucketName}/${fileNameInBucket}`;
-      logger.info(`Successfully uploaded ${file.originalname} to Backblaze B2 S3: ${fileUrl}`);
+      logger.info(
+        `Successfully uploaded ${file.originalname} to Backblaze B2 S3: ${fileUrl}`
+      );
       return fileUrl;
     } catch (s3Ex) {
       logger.error(
@@ -91,10 +97,12 @@ export default (db, config, logger) => {
         type,
         launchDate,
         teamInfo,
-        fundingGoal,
+        fundingGoal, // This is the overall funding goal, not individual milestone targets
         duration,
         budgetBreakdown,
         rewards,
+        milestoneName, // Array of milestone names
+        milestoneTarget, // Array of milestone target amounts
       } = formData;
 
       const images = incomingFiles['images'] || [];
@@ -151,11 +159,14 @@ export default (db, config, logger) => {
         // --- End S3 Uploads ---
 
         if (!mysqlConnectionString) {
-          logger.error("MySQL Connection string is not set in configuration.");
-          return res.status(500).json({ message: 'Server configuration error: Database connection string is missing.' });
+          logger.error('MySQL Connection string is not set in configuration.');
+          return res.status(500).json({
+            message: 'Server configuration error: Database connection string is missing.',
+          });
         }
-        logger.info("MySQL Connection string successfully loaded for submission.");
+        logger.info('MySQL Connection string successfully loaded for submission.');
 
+        // Insert into main FormSubmissions table
         const sqlString = `
           INSERT INTO FormSubmissions (
               title, description, goals, type, launchDate, teamInfo, fundingGoal, duration, budgetBreakdown, rewards
@@ -168,7 +179,7 @@ export default (db, config, logger) => {
           type || null,
           launchDate ? new Date(launchDate) : null,
           teamInfo || null,
-          fundingGoal || null,
+          fundingGoal || null, // Overall funding goal
           duration || null,
           budgetBreakdown || null,
           rewards || null,
@@ -218,6 +229,47 @@ export default (db, config, logger) => {
           );
         }
 
+        // --- Handle Milestones Insertion ---
+        const names = Array.isArray(milestoneName) ? milestoneName : [];
+        const targets = Array.isArray(milestoneTarget) ? milestoneTarget : [];
+
+        // Ensure both arrays have corresponding entries and filter out empty ones
+        const milestonesToInsert = [];
+        for (let i = 0; i < Math.min(names.length, targets.length); i++) {
+          const name = names[i] ? String(names[i]).trim() : '';
+          const target = parseFloat(targets[i]); // Convert to number
+
+          if (name && !isNaN(target) && target >= 0) {
+            milestonesToInsert.push({ name, target });
+          } else {
+            logger.warn(
+              `Skipping invalid milestone entry: Name: "${names[i]}", Target: "${targets[i]}"`
+            );
+          }
+        }
+
+        if (milestonesToInsert.length > 0) {
+          const milestoneInsertSql = `
+            INSERT INTO FormSubmissionMilestones (submission_id, milestone_name, target_amount)
+            VALUES (?, ?, ?)
+          `;
+          for (const milestone of milestonesToInsert) {
+            await db.execute(milestoneInsertSql, [
+              submissionId,
+              milestone.name,
+              milestone.target,
+            ]);
+          }
+          logger.info(
+            'Successfully stored %d milestones for submissionId: %s',
+            milestonesToInsert.length,
+            submissionId
+          );
+        } else {
+          logger.info('No valid milestones were provided for submissionId: %s', submissionId);
+        }
+        // --- End Milestones Insertion ---
+
         logger.info(
           "Successfully stored core mission data for: '%s'. InsertId: %s",
           title || 'N/A',
@@ -232,7 +284,6 @@ export default (db, config, logger) => {
         } else {
           responseMessage += ` WARNING: Some or all files failed to upload to Backblaze B2 S3.`;
         }
-
 
         return res.status(200).json({
           message: responseMessage,
