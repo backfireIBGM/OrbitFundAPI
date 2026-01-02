@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import createUsersRouter from './routes/users.js';
 import createSubmissionsRouter from './routes/submissions.js';
 import createMissionsRouter from './routes/publicMissions.js';
+import createUserMissionsRouter from './routes/userMissions.js';
 import createApprovedMissionByIdRouter from './routes/singleMission.js'; // Good variable name for the import
 import createApprovalRouter from './routes/approval.js';
 import createAuthMiddleware from './middleware/auth.js';
@@ -98,10 +99,11 @@ logger.info('Submission routes mounted at /api/submission.');
 app.use('/api/missions', createMissionsRouter(db, appConfig.jwt, logger));
 logger.info('Public Missions routes mounted at /api/missions (publicly accessible).');
 
-// --- CORRECTED MOUNT POINT AND LOG MESSAGE ---
 app.use('/api/approved-missions', createApprovedMissionByIdRouter(db, appConfig.jwt, logger)); // <--- Consistent mount point
 logger.info('Approved Mission By ID routes mounted at /api/approved-missions (publicly accessible).'); // <--- Consistent log
-// --- END CORRECTED ---
+
+app.use('/api/user-missions', authenticateToken, createUserMissionsRouter(db, logger));
+logger.info('User-specific missions routes mounted at /api/user-missions (authenticated).');
 
 app.use('/api/Approval', authenticateToken, authorizeAdmin, createApprovalRouter(db, appConfig.jwt, logger));
 logger.info('Approval routes mounted at /api/Approval with Admin authorization.');
