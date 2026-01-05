@@ -98,7 +98,7 @@ export default (db, config, logger) => {
         launchDate,
         teamInfo,
         fundingGoal, // This is the overall funding goal, not individual milestone targets
-        duration,
+        endTime,
         budgetBreakdown,
         rewards,
         milestoneName, // Array of milestone names
@@ -169,7 +169,7 @@ export default (db, config, logger) => {
         // Insert into main FormSubmissions table
         const sqlString = `
           INSERT INTO FormSubmissions (
-              title, description, goals, type, launchDate, teamInfo, fundingGoal, duration, budgetBreakdown, rewards
+              title, description, goals, type, launchDate, teamInfo, fundingGoal, endTime, budgetBreakdown, rewards
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `;
         const [result] = await db.execute(sqlString, [
@@ -180,7 +180,7 @@ export default (db, config, logger) => {
           launchDate ? new Date(launchDate) : null,
           teamInfo || null,
           fundingGoal || null, // Overall funding goal
-          duration || null,
+          endTime ? new Date(endTime) : null,
           budgetBreakdown || null,
           rewards || null,
         ]);
