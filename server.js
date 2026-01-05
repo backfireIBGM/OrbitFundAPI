@@ -10,7 +10,7 @@ import createUsersRouter from './routes/users.js';
 import createSubmissionsRouter from './routes/submissions.js';
 import createMissionsRouter from './routes/publicMissions.js';
 import createUserMissionsRouter from './routes/userMissions.js';
-import createApprovedMissionByIdRouter from './routes/singleMission.js'; // Good variable name for the import
+import createApprovedMissionByIdRouter from './routes/singleMission.js';
 import createApprovalRouter from './routes/approval.js';
 import createAuthMiddleware from './middleware/auth.js';
 

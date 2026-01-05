@@ -1,7 +1,6 @@
-// routes/userMissions.js
 import express from 'express';
 
-export default (db, logger) => { // No need for jwtConfig here, as authentication is handled by middleware
+export default (db, logger) => {
     const router = express.Router();
 
     // GET: /api/user-missions (or whatever mount point you choose)
@@ -18,7 +17,7 @@ export default (db, logger) => { // No need for jwtConfig here, as authenticatio
             // First, fetch the missions for the authenticated user
             // Assuming 'FormSubmissions' table has a 'user_id' column
             const [missions] = await db.execute(
-                `SELECT * FROM FormSubmissions WHERE user_id = ? ORDER BY CreatedAt DESC`,
+		`SELECT * FROM FormSubmissions WHERE user_id = ? ORDER BY EndTime DESC`,
                 [userId]
             );
 

@@ -1,12 +1,12 @@
 // routes/users.js
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'; // Still needed for generateJwtToken
+import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import winston from 'winston';
 
 // Import the shared authentication middleware
-import createAuthMiddleware from '../middleware/auth.js'; // Adjust path if different
+import createAuthMiddleware from '../middleware/auth.js';
 
 export default (db, jwtConfig, logger) => {
   const router = express.Router();
@@ -16,7 +16,6 @@ export default (db, jwtConfig, logger) => {
   // Instantiate the shared authentication middleware
   const { authenticateToken, authorizeAdmin } = createAuthMiddleware(jwtConfig, logger);
 
-  // Removed internal authenticateToken definition from here
   // --- Helper for Generating JWT Tokens ---
   const generateJwtToken = (user) => {
     const claims = {
@@ -142,7 +141,6 @@ export default (db, jwtConfig, logger) => {
   );
 
   // --- GET /verifyAdmin ---
-  // This now uses the globally available authenticateToken
   router.get('/verifyAdmin', authenticateToken, async (req, res) => {
     const userId = req.user.id; // From the 'id' claim in the JWT
 
