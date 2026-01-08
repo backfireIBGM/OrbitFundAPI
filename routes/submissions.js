@@ -164,29 +164,40 @@ export default (db, config, logger) => {
             message: 'Server configuration error: Database connection string is missing.',
           });
         }
-        logger.info('MySQL Connection string successfully loaded for submission.');
 
-        // Insert into main FormSubmissions table
-        const sqlString = `
-          INSERT INTO FormSubmissions (
-              title, description, goals, type, launchDate, teamInfo, fundingGoal, endTime, budgetBreakdown, rewards
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-        const [result] = await db.execute(sqlString, [
-          title || null,
-          description || null,
-          goals || null,
-          type || null,
-          launchDate ? new Date(launchDate) : null,
-          teamInfo || null,
-          fundingGoal || null, // Overall funding goal
-          endTime ? new Date(endTime) : null,
-          budgetBreakdown || null,
-          rewards || null,
-        ]);
+   logger.info('MySQL Connection string successfully loaded for submission.');
 
-        const submissionId = result.insertId;
+    // Get user_id from the authenticated token payload
+    const userId = req.user.id;
 
+    // Insert into main FormSubmissions table
+    const sqlString = `
+  INSERT INTO FormSubmissions (
+      user_id, title, description, goals, type, launchDate, teamInfo,
+      fundingGoal, endTime, budgetBreakdown, rewards
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+    const valuesToInsert = [
+	userId, // Use the extracted userId
+	title || null,
+	description || null,
+	goals || null,
+	type || null,
+	launchDate ? new Date(launchDate) : null,
+	teamInfo || null,
+	fundingGoal || null,
+	endTime ? new Date(endTime) : null,
+	budgetBreakdown || null,
+	rewards || null,
+    ];
+
+    logger.info('SQL Query:', sqlString);
+    logger.info('Values for insertion:', valuesToInsert);
+
+    const [result] = await db.execute(sqlString, valuesToInsert); 
+    const submissionId = result.insertId; // Get the ID of the newly inserted submission
+	
         // Insert into FormSubmissionImages
         if (savedImageUrls.length > 0) {
           const imageInsertSql =
