@@ -3,13 +3,15 @@ import express from 'express';
 export default (db, jwtConfig, logger) => {
     const router = express.Router();
 
-    // This route definition should be RELATIVE to the base path where the router is mounted in server.js
-    // If mounted at /api/approved-missions, this becomes /api/approved-missions/:id
-    router.get('/:id', async (req, res) => { // <--- Changed from '/single-missions/:id' to '/:id'
+    router.get('/:id', async (req, res) => {
         try {
             const missionId = req.params.id;
 
-            const [missions] = await db.execute("SELECT * FROM FormSubmissions WHERE Id = ? AND Status = 'Approved'", [missionId]);
+            // Updated query to use is_public = 1 instead of Status = 'Approved'
+            const [missions] = await db.execute(
+                "SELECT * FROM FormSubmissions WHERE Id = ? AND is_public = 1", 
+                [missionId]
+            );
 
             if (missions.length === 0) {
                 logger.info(`Retrieved 0 approved missions for ID: ${missionId}`);
@@ -18,6 +20,7 @@ export default (db, jwtConfig, logger) => {
 
             const mission = missions[0];
 
+            // ... rest of the code for fetching images, videos, etc. remains the same ...
             const [images] = await db.execute(
                 `SELECT submission_id, image_url FROM FormSubmissionImages WHERE submission_id = ?`,
                 [missionId]

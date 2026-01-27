@@ -2,24 +2,25 @@ import express from 'express';
 
 export default (db, jwtConfig, logger) => {
     const router = express.Router();
-
     router.get('/approved-missions', async (req, res) => {
-        try {
-            const { maxMissions, excludeId } = req.query;
+    try {
+        const { maxMissions, excludeId } = req.query;
 
-            const sqlWhereConditions = ["Status = 'Approved'"]; // Array to build WHERE clauses
-            const sqlParams = []; // Array to collect ALL SQL parameters in correct order
+        // is_public = 1 ensures both user_approved and admin_approved are true
+        const sqlWhereConditions = ['is_public = 1']; 
+        const sqlParams = []; 
 
-            let limitClause = ''; // Will be 'LIMIT ?' or ''
+        let limitClause = ''; 
 
-            // 1. Handle excludeId (part of WHERE clause)
-            if (excludeId && !isNaN(parseInt(excludeId))) {
-                const idToExclude = parseInt(excludeId);
-                if (idToExclude > 0) {
-                    sqlWhereConditions.push('Id != ?');
-                    sqlParams.push(String(idToExclude)); // Add excludeId parameter
-                }
-            }
+	    // 1. Handle excludeId (logic remains same)
+	    if (excludeId && !isNaN(parseInt(excludeId))) {
+		const idToExclude = parseInt(excludeId);
+
+		if (idToExclude > 0) {
+		    sqlWhereConditions.push('Id != ?');
+		    sqlParams.push(String(idToExclude));
+		}
+	    }
 
             // 2. Build the WHERE clause
             const whereClause = sqlWhereConditions.length > 0 ? `WHERE ${sqlWhereConditions.join(' AND ')}` : '';

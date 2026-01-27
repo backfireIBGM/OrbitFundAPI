@@ -15,7 +15,6 @@ export default (db, logger) => {
 
         try {
             // First, fetch the missions for the authenticated user
-            // Assuming 'FormSubmissions' table has a 'user_id' column
             const [missions] = await db.execute(
 		`SELECT * FROM FormSubmissions WHERE user_id = ? ORDER BY EndTime DESC`,
                 [userId]

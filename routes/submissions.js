@@ -1,4 +1,3 @@
-// C:/WebDev/OrbitFundAPI/routes/submissions.js
 import express from 'express';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -8,7 +7,6 @@ import path from 'path';
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// THIS IS THE CRUCIAL PART: The 'export default' keyword
 export default (db, config, logger) => {
   const router = express.Router();
 
