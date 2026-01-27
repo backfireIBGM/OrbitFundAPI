@@ -13,6 +13,7 @@ import createUserMissionsRouter from './routes/userMissions.js';
 import createApprovedMissionByIdRouter from './routes/singleMission.js';
 import createApprovalRouter from './routes/approval.js';
 import createAuthMiddleware from './middleware/auth.js';
+import createUserActionsRouter from './routes/userActions.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -108,6 +109,9 @@ logger.info('User-specific missions routes mounted at /api/user-missions (authen
 app.use('/api/Approval', authenticateToken, authorizeAdmin, createApprovalRouter(db, appConfig.jwt, logger));
 logger.info('Approval routes mounted at /api/Approval with Admin authorization.');
 
+// Mount the new router
+app.use('/api/user-actions', authenticateToken, createUserActionsRouter(db, logger));
+logger.info('User Actions routes mounted at /api/user-actions.');
 
 app.listen(port, () => {
   logger.info(`OrbitFund backend listening at http://localhost:${port}`);
