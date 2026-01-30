@@ -11,6 +11,7 @@ import createSubmissionsRouter from './routes/submissions.js';
 import createMissionsRouter from './routes/publicMissions.js';
 import createUserMissionsRouter from './routes/userMissions.js';
 import createApprovedMissionByIdRouter from './routes/singleMission.js';
+import createUserSingleMissionRouter from './routes/userSingleMission.js';
 import createApprovalRouter from './routes/approval.js';
 import createAuthMiddleware from './middleware/auth.js';
 import createUserActionsRouter from './routes/userActions.js';
@@ -102,6 +103,11 @@ logger.info('Public Missions routes mounted at /api/missions (publicly accessibl
 
 app.use('/api/approved-missions', createApprovedMissionByIdRouter(db, appConfig.jwt, logger)); // <--- Consistent mount point
 logger.info('Approved Mission By ID routes mounted at /api/approved-missions (publicly accessible).'); // <--- Consistent log
+
+// Mount the route
+app.use('/api/my-missions', authenticateToken, createUserSingleMissionRouter(db, logger));
+
+logger.info('User Single Mission route mounted at /api/my-missions (authenticated).');
 
 app.use('/api/user-missions', authenticateToken, createUserMissionsRouter(db, logger));
 logger.info('User-specific missions routes mounted at /api/user-missions (authenticated).');
