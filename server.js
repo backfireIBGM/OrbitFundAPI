@@ -63,6 +63,7 @@ const appConfig = {
     jwtAudience: process.env.JWT_AUDIENCE,
   },
   backblazeB2S3: {
+    region: process.env.B2_REGION || 'us-west-004', 
     accessKeyId: process.env.B2_ACCESS_KEY_ID,
     applicationKey: process.env.B2_APPLICATION_KEY,
     serviceUrl: process.env.B2_SERVICE_URL,
@@ -105,7 +106,7 @@ app.use('/api/approved-missions', createApprovedMissionByIdRouter(db, appConfig.
 logger.info('Approved Mission By ID routes mounted at /api/approved-missions (publicly accessible).'); // <--- Consistent log
 
 // Mount the route
-app.use('/api/my-missions', authenticateToken, createUserSingleMissionRouter(db, logger));
+app.use('/api/my-missions', authenticateToken, createUserSingleMissionRouter(db, appConfig, logger));
 
 logger.info('User Single Mission route mounted at /api/my-missions (authenticated).');
 
